@@ -25,6 +25,7 @@ import (
 
 const (
 	CMD_GETPATHS = "get_paths"
+	CMD_RENAME   = "rename"
 )
 
 /**
@@ -61,7 +62,7 @@ func (m *MogileFsClient) returnTrackerConnection(conn net.Conn) {
  * @return values url.Values of the result
  * @return err error returned by the tracker - nil on success
  */
-var reMogileOk = regexp.MustCompile("^OK (.+)\r\n$")
+var reMogileOk = regexp.MustCompile("^OK (.*)\r\n$")
 var reMogileFail = regexp.MustCompile("^ERR (\\S+) ")
 
 func (m *MogileFsClient) DoRequest(command string, args url.Values) (values url.Values, err error) {

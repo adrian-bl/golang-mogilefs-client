@@ -104,9 +104,22 @@ func (m *MogileFsClient) GetPaths(key string, opts *GetPathsOpts) (paths []strin
 	return
 }
 
+/**
+* Renames an existing key
+" @param oldname string name of the key to rename
+* @param newname string the new name to use for this key
+* @return err error message from tracker, nil on success
+*/
 func (m *MogileFsClient) Rename(oldname string, newname string) (err error) {
+	args := make(url.Values)
+	args.Add("domain", m.domain)
+	args.Add("from_key", oldname)
+	args.Add("to_key", newname)
+
+	_, err = m.DoRequest(CMD_RENAME, args)
 	return
 }
+
 func (m *MogileFsClient) UpdateClass(key string, newclass string) (err error) {
 	return
 }
