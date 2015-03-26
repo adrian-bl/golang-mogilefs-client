@@ -26,6 +26,7 @@ var flagTrackers = flag.String("trackers", "localhost:7001", "A list of trackers
 var flagInfoKey = flag.String("info", "", "The key to search and printout information about")
 var flagRenameFrom = flag.String("rename_from", "", "RENAME: The key to rename")
 var flagRenameTo = flag.String("rename_to", "", "RENAME: The new name of the key")
+var flagDeleteKey = flag.String("delete", "", "The key to delete")
 
 func main() {
 	flag.Parse()
@@ -34,6 +35,8 @@ func main() {
 
 	if len(*flagInfoKey) != 0 {
 		printKeyInfo(trackerList, *flagDomain, *flagInfoKey)
+	} else if len(*flagDeleteKey) != 0 {
+		deleteFile(trackerList, *flagDomain, *flagDeleteKey)
 	} else if len(*flagRenameFrom) != 0 && len(*flagRenameTo) != 0 {
 		renameFile(trackerList, *flagDomain, *flagRenameFrom, *flagRenameTo)
 	} else {
@@ -62,6 +65,17 @@ func printKeyInfo(trackers []string, domain string, key string) {
 func renameFile(trackers []string, domain, from string, to string) {
 	mc := mogilefs.New(domain, trackers)
 	e := mc.Rename(from, to)
+
+	if e == nil {
+		fmt.Printf("success\n")
+	} else {
+		fmt.Printf("error = %s\n", e)
+	}
+}
+
+func deleteFile(trackers []string, domain, key string) {
+	mc := mogilefs.New(domain, trackers)
+	e := mc.Delete(key)
 
 	if e == nil {
 		fmt.Printf("success\n")

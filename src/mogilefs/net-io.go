@@ -26,6 +26,7 @@ import (
 const (
 	CMD_GETPATHS = "get_paths"
 	CMD_RENAME   = "rename"
+	CMD_DELETE   = "delete"
 )
 
 /**
