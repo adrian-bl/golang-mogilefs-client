@@ -123,7 +123,7 @@ func (m *MogileFsClient) Rename(oldname string, newname string) (err error) {
 /**
  * Removes given key from the configured mogilefs domain
  * @param key string the key to remove
- * @return err error message from tracker, ni on success
+ * @return err error message from tracker, nil on success
  */
 func (m *MogileFsClient) Delete(key string) (err error) {
 	args := make(url.Values)
@@ -131,6 +131,20 @@ func (m *MogileFsClient) Delete(key string) (err error) {
 	args.Add("key", key)
 
 	_, err = m.DoRequest(CMD_DELETE, args)
+	return
+}
+
+/**
+ * Returns debuggin information about a key
+ * @param key string the key to debug
+ * @return err error message from tracker, nil on success
+ */
+func (m *MogileFsClient) Debug(key string) (values url.Values, err error) {
+	args := make(url.Values)
+	args.Add("domain", m.domain)
+	args.Add("key", key)
+
+	values, err = m.DoRequest(CMD_DEBUG, args)
 	return
 }
 

@@ -12,12 +12,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// NOTE: This is not supposed to be a replacement for the original perl-mogile-tools collection
+// This file just serves as a quick testbed & demo for the mogile golang package
+
 package main
 
 import (
 	"flag"
 	"fmt"
 	"mogilefs"
+	"sort"
 	"strings"
 )
 
@@ -27,6 +31,7 @@ var flagInfoKey = flag.String("info", "", "The key to search and printout inform
 var flagRenameFrom = flag.String("rename_from", "", "RENAME: The key to rename")
 var flagRenameTo = flag.String("rename_to", "", "RENAME: The new name of the key")
 var flagDeleteKey = flag.String("delete", "", "The key to delete")
+var flagDebugKey = flag.String("debug_key", "", "The key to debug")
 
 func main() {
 	flag.Parse()
@@ -37,6 +42,8 @@ func main() {
 		printKeyInfo(trackerList, *flagDomain, *flagInfoKey)
 	} else if len(*flagDeleteKey) != 0 {
 		deleteFile(trackerList, *flagDomain, *flagDeleteKey)
+	} else if len(*flagDebugKey) != 0 {
+		debugKey(trackerList, *flagDomain, *flagDebugKey)
 	} else if len(*flagRenameFrom) != 0 && len(*flagRenameTo) != 0 {
 		renameFile(trackerList, *flagDomain, *flagRenameFrom, *flagRenameTo)
 	} else {
@@ -81,5 +88,24 @@ func deleteFile(trackers []string, domain, key string) {
 		fmt.Printf("success\n")
 	} else {
 		fmt.Printf("error = %s\n", e)
+	}
+}
+
+func debugKey(trackers []string, domain, key string) {
+	mc := mogilefs.New(domain, trackers)
+	values, err := mc.Debug(key)
+
+	if err == nil {
+		var sortedKeys []string
+		for k := range values {
+			sortedKeys = append(sortedKeys, k)
+		}
+		sort.Strings(sortedKeys)
+
+		for _, k := range sortedKeys {
+			fmt.Printf("%s = %s\n", k, values.Get(k))
+		}
+	} else {
+		fmt.Printf("error = %s\n", err)
 	}
 }
