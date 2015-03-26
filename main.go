@@ -20,7 +20,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"mogilefs"
+	"os"
 	"sort"
 	"strings"
 )
@@ -32,6 +34,7 @@ var flagRenameFrom = flag.String("rename_from", "", "RENAME: The key to rename")
 var flagRenameTo = flag.String("rename_to", "", "RENAME: The new name of the key")
 var flagDeleteKey = flag.String("delete", "", "The key to delete")
 var flagDebugKey = flag.String("debug_key", "", "The key to debug")
+var flagFetchKey = flag.String("fetch_key", "", "Download given key from mogilefs - output is written to STDOUT")
 
 func main() {
 	flag.Parse()
@@ -46,6 +49,8 @@ func main() {
 		debugKey(trackerList, *flagDomain, *flagDebugKey)
 	} else if len(*flagRenameFrom) != 0 && len(*flagRenameTo) != 0 {
 		renameFile(trackerList, *flagDomain, *flagRenameFrom, *flagRenameTo)
+	} else if len(*flagFetchKey) != 0 {
+		fetchFile(trackerList, *flagDomain, *flagFetchKey)
 	} else {
 		flag.PrintDefaults()
 	}
@@ -107,5 +112,29 @@ func debugKey(trackers []string, domain, key string) {
 		}
 	} else {
 		fmt.Printf("error = %s\n", err)
+	}
+}
+
+func fetchFile(trackers []string, domain, key string) {
+	mc := mogilefs.New(domain, trackers)
+	f, err := mc.Fetch(key)
+
+	if err != nil {
+		panic(err)
+	}
+
+	buf := make([]byte, 8192)
+
+	for {
+		nr, err := f.Read(buf)
+		if nr > 0 {
+			os.Stdout.Write(buf[0:nr])
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
 	}
 }

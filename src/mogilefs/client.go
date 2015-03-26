@@ -18,6 +18,8 @@ package mogilefs
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"time"
 )
@@ -145,6 +147,34 @@ func (m *MogileFsClient) Debug(key string) (values url.Values, err error) {
 	args.Add("key", key)
 
 	values, err = m.DoRequest(CMD_DEBUG, args)
+	return
+}
+
+/**
+ * Attempts to fetch given key
+ * @param key string the key to fetch
+ * @return r io.ReadCloser from the http body response
+ * @return err error - nil on success
+ */
+func (m *MogileFsClient) Fetch(key string) (r io.ReadCloser, err error) {
+	paths, perr := m.GetPaths(key, nil)
+	err = perr
+
+	if err == nil {
+		for _, path := range paths {
+			rqResp, rqErr := http.Get(path)
+			err = rqErr
+			if err == nil {
+				if rqResp.StatusCode == 200 {
+					r = rqResp.Body
+					break
+				} else {
+					err = fmt.Errorf("Invalid HTTP Status code: %d", rqResp.StatusCode)
+				}
+			}
+		}
+	}
+
 	return
 }
 
