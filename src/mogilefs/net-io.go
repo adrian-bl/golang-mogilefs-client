@@ -51,15 +51,26 @@ func (cr *countingReader) Read(buffer []byte) (nr int, err error) {
  */
 func (m *MogileFsClient) getTrackerConnection() (conn net.Conn, err error) {
 
-	// fixme: this should blacklist known bad  hosts
-	for _, host := range m.trackers {
-		m.last_tracker = host
-		conn, err = net.DialTimeout("tcp", m.last_tracker, m.dial_timeout)
-		if err == nil {
-			break
+	for _, ignoreBlacklist := range [2]bool{false, true} {
+		for _, host := range m.trackers {
+			m.last_tracker = host
+
+			if ignoreBlacklist == false && m.trackerIsBad(m.last_tracker) {
+				continue
+			}
+
+			conn, err = net.DialTimeout("tcp", m.last_tracker, m.dial_timeout)
+			if err == nil {
+				// we connected to this tracker for whatever reason: it is NOT whitelisted now - it will only be
+				// whitelisted after returning a successful command or/and finishing the dead timeout
+				return
+			} else {
+				m.markTrackerAsBad(m.last_tracker)
+			}
 		}
 	}
 
+	// we got an error :-(
 	return
 }
 
@@ -67,7 +78,12 @@ func (m *MogileFsClient) getTrackerConnection() (conn net.Conn, err error) {
  * @desc Returns a tracker connection so it can be closed (or maybe put in a pool in a later version
  * @param conn net.Conn as handed out by getTrackerConnection()
  */
-func (m *MogileFsClient) returnTrackerConnection(conn net.Conn) {
+func (m *MogileFsClient) returnTrackerConnection(conn net.Conn, hadError bool) {
+	if hadError == true {
+		m.markTrackerAsBad(m.last_tracker)
+	} else { // else: could keepalive
+		m.markTrackerAsAlive(m.last_tracker)
+	}
 	conn.Close()
 }
 
@@ -87,7 +103,9 @@ func (m *MogileFsClient) DoRequest(command string, args url.Values) (values url.
 	// format: COMMAND URLENCODED_ARGS\r\n
 	command += " " + args.Encode() + "\r\n"
 
-	tracker_reply := ""
+	tracker_reply := ""   // buffer to store the tracker reply
+	blame_tracker := true // passed to returnTrackerConnection to mark a tracker as 'suspect'
+
 	tracker_conn, tracker_conn_err := m.getTrackerConnection()
 	err = tracker_conn_err
 	if err == nil {
@@ -96,7 +114,6 @@ func (m *MogileFsClient) DoRequest(command string, args url.Values) (values url.
 			b := bufio.NewReader(tracker_conn)
 			tracker_reply, err = b.ReadString('\n')
 		}
-		m.returnTrackerConnection(tracker_conn)
 	}
 
 	if len(tracker_reply) > 0 {
@@ -108,12 +125,17 @@ func (m *MogileFsClient) DoRequest(command string, args url.Values) (values url.
 				err = errors.New("internal:invalid tracker reply")
 			} else {
 				err = fmt.Errorf("mogilefsd:%s", failMatch[0][1])
+				blame_tracker = false // that's not a tracker failure
 			}
 		} else {
 			// reply was probably ok: just let
 			// ParseQuery() decide the outcome of err
 			values, err = url.ParseQuery(okMatch[0][1])
+			blame_tracker = false
 		}
 	}
+
+	m.returnTrackerConnection(tracker_conn, blame_tracker)
+
 	return
 }

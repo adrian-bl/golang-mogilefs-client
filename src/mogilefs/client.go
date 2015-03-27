@@ -28,10 +28,11 @@ import (
  * Structure of the client object
  */
 type MogileFsClient struct {
-	domain       string   // the domain used by this instance
-	trackers     []string // a list of trackers we should try to connect
-	last_tracker string   // the last tracker used by us - may be an empty string
-	dial_timeout time.Duration
+	domain        string   // the domain used by this instance
+	trackers      []string // a list of trackers we should try to connect
+	dead_trackers map[string]time.Time
+	last_tracker  string // the last tracker used by us - may be an empty string
+	dial_timeout  time.Duration
 }
 
 /**
@@ -50,9 +51,10 @@ type GetPathsOpts struct {
  */
 func New(domain string, trackers []string) *MogileFsClient {
 	return &MogileFsClient{
-		domain:       domain,
-		trackers:     trackers,
-		dial_timeout: time.Duration(1) * time.Second,
+		domain:        domain,
+		trackers:      trackers,
+		dial_timeout:  time.Duration(1) * time.Second,
+		dead_trackers: make(map[string]time.Time),
 	}
 }
 
