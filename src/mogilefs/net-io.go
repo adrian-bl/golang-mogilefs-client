@@ -18,17 +18,31 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"regexp"
 )
 
 const (
-	CMD_GETPATHS = "get_paths"
-	CMD_RENAME   = "rename"
-	CMD_DELETE   = "delete"
-	CMD_DEBUG    = "file_debug"
+	CMD_GETPATHS     = "get_paths"
+	CMD_RENAME       = "rename"
+	CMD_DELETE       = "delete"
+	CMD_DEBUG        = "file_debug"
+	CMD_CREATE_OPEN  = "create_open"
+	CMD_CREATE_CLOSE = "create_close"
 )
+
+type countingReader struct {
+	r      io.Reader
+	nbytes int
+}
+
+func (cr *countingReader) Read(buffer []byte) (nr int, err error) {
+	nr, err = cr.r.Read(buffer)
+	cr.nbytes += nr
+	return
+}
 
 /**
  * @desc Returns an established TCP connection to one of the specified trackers

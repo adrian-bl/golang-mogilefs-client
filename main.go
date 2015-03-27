@@ -29,12 +29,14 @@ import (
 
 var flagDomain = flag.String("domain", "", "The domain to use for this request")
 var flagTrackers = flag.String("trackers", "localhost:7001", "A list of trackers to use")
+var flagClass = flag.String("class", "", "class to use for create operation")
 var flagInfoKey = flag.String("info", "", "The key to search and printout information about")
 var flagRenameFrom = flag.String("rename_from", "", "RENAME: The key to rename")
 var flagRenameTo = flag.String("rename_to", "", "RENAME: The new name of the key")
 var flagDeleteKey = flag.String("delete", "", "The key to delete")
 var flagDebugKey = flag.String("debug_key", "", "The key to debug")
 var flagFetchKey = flag.String("fetch_key", "", "Download given key from mogilefs - output is written to STDOUT")
+var flagCreateKey = flag.String("create_key", "", "The new key to create, input will be read from STDIN")
 
 func main() {
 	flag.Parse()
@@ -51,6 +53,8 @@ func main() {
 		renameFile(trackerList, *flagDomain, *flagRenameFrom, *flagRenameTo)
 	} else if len(*flagFetchKey) != 0 {
 		fetchFile(trackerList, *flagDomain, *flagFetchKey)
+	} else if len(*flagCreateKey) != 0 {
+		createFile(trackerList, *flagDomain, *flagCreateKey, *flagClass)
 	} else {
 		flag.PrintDefaults()
 	}
@@ -74,7 +78,7 @@ func printKeyInfo(trackers []string, domain string, key string) {
 	}
 }
 
-func renameFile(trackers []string, domain, from string, to string) {
+func renameFile(trackers []string, domain string, from string, to string) {
 	mc := mogilefs.New(domain, trackers)
 	e := mc.Rename(from, to)
 
@@ -85,7 +89,7 @@ func renameFile(trackers []string, domain, from string, to string) {
 	}
 }
 
-func deleteFile(trackers []string, domain, key string) {
+func deleteFile(trackers []string, domain string, key string) {
 	mc := mogilefs.New(domain, trackers)
 	e := mc.Delete(key)
 
@@ -96,7 +100,7 @@ func deleteFile(trackers []string, domain, key string) {
 	}
 }
 
-func debugKey(trackers []string, domain, key string) {
+func debugKey(trackers []string, domain string, key string) {
 	mc := mogilefs.New(domain, trackers)
 	values, err := mc.Debug(key)
 
@@ -115,7 +119,7 @@ func debugKey(trackers []string, domain, key string) {
 	}
 }
 
-func fetchFile(trackers []string, domain, key string) {
+func fetchFile(trackers []string, domain string, key string) {
 	mc := mogilefs.New(domain, trackers)
 	f, err := mc.Fetch(key)
 
@@ -136,5 +140,16 @@ func fetchFile(trackers []string, domain, key string) {
 		if err != nil {
 			panic(err)
 		}
+	}
+}
+
+func createFile(trackers []string, domain string, key string, class string) {
+	mc := mogilefs.New(domain, trackers)
+	_, err := mc.Create(key, class, os.Stdin)
+
+	if err != nil {
+		fmt.Printf("error = %s\n", err)
+	} else {
+		fmt.Printf("success\n")
 	}
 }

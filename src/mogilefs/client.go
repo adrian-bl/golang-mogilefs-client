@@ -178,6 +178,53 @@ func (m *MogileFsClient) Fetch(key string) (r io.ReadCloser, err error) {
 	return
 }
 
+/**
+ * Uploads (aka: sets) a new key to the filesystem
+ * @param key string the key to create
+ * @param class string the class to use for this file. The default class equals an empty string
+ * @param r io.Reader the reader to fetch the data from.
+ * @return close_values url.Values The reply to CREATE_CLOSE
+ * @return err error message of mogilefsd, nil on success
+ */
+func (m *MogileFsClient) Create(key string, class string, r io.Reader) (close_values url.Values, err error) {
+	create_args := make(url.Values)
+	create_args.Set("domain", m.domain)
+	create_args.Set("key", key)
+	create_args.Set("class", class)
+	create_args.Set("fid", "0")
+	create_args.Set("multi_dest", "0") // fixme: implement multi_dest ?
+
+	create_values, err := m.DoRequest(CMD_CREATE_OPEN, create_args)
+	cr := countingReader{r: r}
+
+	if err == nil && len(create_values.Get("path")) > 0 {
+		putRq, putErr := http.NewRequest("PUT", create_values.Get("path"), &cr)
+		err = putErr
+
+		if err == nil {
+			client := &http.Client{}
+			putRes, putErr := client.Do(putRq)
+			err = putErr
+			if err == nil {
+				if putRes.StatusCode == 200 {
+					close_args := make(url.Values)
+					close_args.Set("domain", create_args.Get("domain"))
+					close_args.Set("key", create_args.Get("key"))
+					close_args.Set("fid", create_values.Get("fid"))
+					close_args.Set("devid", create_values.Get("devid"))
+					close_args.Set("path", create_values.Get("path"))
+					close_args.Set("size", fmt.Sprintf("%d", cr.nbytes))
+					close_values, err = m.DoRequest(CMD_CREATE_CLOSE, close_args)
+				} else {
+					err = fmt.Errorf("Invalid HTTP Status code of storage daemon: %d", putRes.StatusCode)
+				}
+			}
+		}
+
+	}
+	return
+}
+
 func boolToInt(value bool) (rv int) {
 	if value {
 		rv = 1
