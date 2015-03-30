@@ -25,12 +25,12 @@ import (
 )
 
 const (
-	CMD_GETPATHS     = "get_paths"
-	CMD_RENAME       = "rename"
-	CMD_DELETE       = "delete"
-	CMD_DEBUG        = "file_debug"
-	CMD_CREATE_OPEN  = "create_open"
-	CMD_CREATE_CLOSE = "create_close"
+	cmd_getpaths     = "get_paths"
+	cmd_rename       = "rename"
+	cmd_delete       = "delete"
+	cmd_debug        = "file_debug"
+	cmd_create_open  = "create_open"
+	cmd_create_close = "create_close"
 )
 
 type countingReader struct {

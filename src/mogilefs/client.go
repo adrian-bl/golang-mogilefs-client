@@ -14,6 +14,13 @@ limitations under the License.
 
 */
 
+/*
+Package mogilefs implements a mogilefs client library.
+
+Example:
+	mc := mogilefs.New(domain, trackers)
+	mc.Create("new-key", "custom-class", os.Stdin);
+*/
 package mogilefs
 
 import (
@@ -24,31 +31,29 @@ import (
 	"time"
 )
 
-/**
- * Structure of the client object
- */
+// MogileFsClient structure returned by New()
 type MogileFsClient struct {
-	domain        string   // the domain used by this instance
-	trackers      []string // a list of trackers we should try to connect
+	// The domain used by this instance
+	domain string
+	// A list of trackers we should try to connect
+	trackers []string
+	// A list of known broken trackers
 	dead_trackers map[string]time.Time
-	last_tracker  string // the last tracker used by us - may be an empty string
-	dial_timeout  time.Duration
+	// The last tracker used by us - may be an empty string
+	last_tracker string
+	// Generic timeout for dial
+	dial_timeout time.Duration
 }
 
-/**
- * Structure of opts for GetPaths
- */
+// Optional argument to the GetPaths function
 type GetPathsOpts struct {
-	NoVerify  bool // only return the tracker response -> do not verify that the file exists
-	Pathcount int  // the number of paths to return, defaults to 2 (the minimum)
+	// Only return the tracker response - do not verify that the file actually exists
+	NoVerify bool
+	// The number of paths to return. Defaults to 2 (the minimum)
+	Pathcount int
 }
 
-/**
- * @desc Constructs a new mogilefs client object
- * @param domain string the domain to use for this client
- * @param trackers []string list trackers to use. The passed string is expected to be parseable by golangs dial function
- * @return MogileFsClient struct
- */
+// Returns a new MogileFsClient.
 func New(domain string, trackers []string) *MogileFsClient {
 	return &MogileFsClient{
 		domain:        domain,
@@ -58,21 +63,15 @@ func New(domain string, trackers []string) *MogileFsClient {
 	}
 }
 
-/**
- * @desc Returns the last used tracker
- * @return string of the last tracker host, may be an empty string
- */
+// Returns the last tracker used (or better: 'touched') by the client (may return an empty string)
 func (m *MogileFsClient) LastTracketr() string {
 	return m.last_tracker
 }
 
-/**
- * Returns a list of available paths for given key
- * @param key string the key to lookup
- * @param opts *GetPathsOpts optional parameters, may be nil - see 'GetPathsOpts struct'
- * @return paths []string list of available paths - may be empty on MISS
- * @return err error due to connection or tracker timeout issues
- */
+// Returns all known paths of the requested key.
+//
+// The upper limit of the returned paths may be adjusted by passing the optional
+// GetPathsOpts argument to the function.
 func (m *MogileFsClient) GetPaths(key string, opts *GetPathsOpts) (paths []string, err error) {
 	// Set some sane defaults if caller didn't care
 	if opts == nil {
@@ -90,7 +89,7 @@ func (m *MogileFsClient) GetPaths(key string, opts *GetPathsOpts) (paths []strin
 	args.Add("pathcount", fmt.Sprintf("%d", opts.Pathcount))
 	args.Add("noverify", fmt.Sprintf("%d", boolToInt(opts.NoVerify)))
 
-	values, rqerr := m.DoRequest(CMD_GETPATHS, args)
+	values, rqerr := m.DoRequest(cmd_getpaths, args)
 	err = rqerr
 
 	if err == nil && values != nil {
@@ -108,56 +107,40 @@ func (m *MogileFsClient) GetPaths(key string, opts *GetPathsOpts) (paths []strin
 	return
 }
 
-/**
-* Renames an existing key
-" @param oldname string name of the key to rename
-* @param newname string the new name to use for this key
-* @return err error message from tracker, nil on success
-*/
+// Renames an existing key
 func (m *MogileFsClient) Rename(oldname string, newname string) (err error) {
 	args := make(url.Values)
 	args.Add("domain", m.domain)
 	args.Add("from_key", oldname)
 	args.Add("to_key", newname)
 
-	_, err = m.DoRequest(CMD_RENAME, args)
+	_, err = m.DoRequest(cmd_rename, args)
 	return
 }
 
-/**
- * Removes given key from the configured mogilefs domain
- * @param key string the key to remove
- * @return err error message from tracker, nil on success
- */
+// Deletes an existing key
 func (m *MogileFsClient) Delete(key string) (err error) {
 	args := make(url.Values)
 	args.Add("domain", m.domain)
 	args.Add("key", key)
 
-	_, err = m.DoRequest(CMD_DELETE, args)
+	_, err = m.DoRequest(cmd_delete, args)
 	return
 }
 
-/**
- * Returns debuggin information about a key
- * @param key string the key to debug
- * @return err error message from tracker, nil on success
- */
+// Returns debugging information about a key.
+//
+// This function should not be used to lookup paths - use GetPaths to do so.
 func (m *MogileFsClient) Debug(key string) (values url.Values, err error) {
 	args := make(url.Values)
 	args.Add("domain", m.domain)
 	args.Add("key", key)
 
-	values, err = m.DoRequest(CMD_DEBUG, args)
+	values, err = m.DoRequest(cmd_debug, args)
 	return
 }
 
-/**
- * Attempts to fetch given key
- * @param key string the key to fetch
- * @return r io.ReadCloser from the http body response
- * @return err error - nil on success
- */
+// Returns an io.ReadCloser with the contents of the requested key.
 func (m *MogileFsClient) Fetch(key string) (r io.ReadCloser, err error) {
 	paths, perr := m.GetPaths(key, nil)
 	err = perr
@@ -180,14 +163,9 @@ func (m *MogileFsClient) Fetch(key string) (r io.ReadCloser, err error) {
 	return
 }
 
-/**
- * Uploads (aka: sets) a new key to the filesystem
- * @param key string the key to create
- * @param class string the class to use for this file. The default class equals an empty string
- * @param r io.Reader the reader to fetch the data from.
- * @return close_values url.Values The reply to CREATE_CLOSE
- * @return err error message of mogilefsd, nil on success
- */
+// Uploads (aka: sets) a new key in the filesystem.
+//
+// Note: Set 'class' to an empty string to use the default class of the filesystem.
 func (m *MogileFsClient) Create(key string, class string, r io.Reader) (close_values url.Values, err error) {
 	create_args := make(url.Values)
 	create_args.Set("domain", m.domain)
@@ -196,7 +174,7 @@ func (m *MogileFsClient) Create(key string, class string, r io.Reader) (close_va
 	create_args.Set("fid", "0")
 	create_args.Set("multi_dest", "0") // fixme: implement multi_dest ?
 
-	create_values, err := m.DoRequest(CMD_CREATE_OPEN, create_args)
+	create_values, err := m.DoRequest(cmd_create_open, create_args)
 	cr := countingReader{r: r}
 
 	if err == nil && len(create_values.Get("path")) > 0 {
@@ -216,7 +194,7 @@ func (m *MogileFsClient) Create(key string, class string, r io.Reader) (close_va
 					close_args.Set("devid", create_values.Get("devid"))
 					close_args.Set("path", create_values.Get("path"))
 					close_args.Set("size", fmt.Sprintf("%d", cr.nbytes))
-					close_values, err = m.DoRequest(CMD_CREATE_CLOSE, close_args)
+					close_values, err = m.DoRequest(cmd_create_close, close_args)
 				} else {
 					err = fmt.Errorf("Invalid HTTP Status code of storage daemon: %d", putRes.StatusCode)
 				}

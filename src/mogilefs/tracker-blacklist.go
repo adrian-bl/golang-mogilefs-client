@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	BLACKLIST_DURATION = time.Duration(60) * time.Second
+	blacklist_duration = time.Duration(60) * time.Second
 )
 
 /**
@@ -33,7 +33,7 @@ func (m *MogileFsClient) trackerIsBad(tracker string) (isdown bool) {
 func (m *MogileFsClient) markTrackerAsBad(tracker string) {
 	if m.trackerIsBad(tracker) == false {
 		// -> not known to be bad: add it to blacklist
-		m.dead_trackers[tracker] = time.Now().Add(BLACKLIST_DURATION)
+		m.dead_trackers[tracker] = time.Now().Add(blacklist_duration)
 	}
 }
 
