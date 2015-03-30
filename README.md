@@ -46,5 +46,9 @@ func main() {
 }
 ```
 
-A somewhat more advanced client can be found in the [cmd/demo](tree/master/cmd/demo) directory.
+A somewhat more advanced client can be found in the [cmd/demo](https://github.com/adrian-bl/golang-mogilefs-client/tree/master/cmd/demo) directory.
 
+
+Documentation
+========================
+The package includes (documentation in godoc format)(http://godoc.org/github.com/adrian-bl/golang-mogilefs-client/mogilefs).
