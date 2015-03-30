@@ -51,4 +51,4 @@ A somewhat more advanced client can be found in the [cmd/demo](https://github.co
 
 Documentation
 ========================
-The package includes (documentation in godoc format)(http://godoc.org/github.com/adrian-bl/golang-mogilefs-client/mogilefs).
+The package includes [documentation in godoc format](http://godoc.org/github.com/adrian-bl/golang-mogilefs-client/mogilefs).
